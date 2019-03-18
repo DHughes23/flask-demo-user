@@ -1,10 +1,8 @@
 from . import db
 
 class Profile(db.Model):
-    # You can use this to change the table name. The default convention is to use
-    # the class name. In this case a class name of UserProfile would create a
-    # user_profile (singular) table, but if we specify __tablename__ we can change it
-    # to `user_profiles` or some other name.
+    # You can use this to change the table name. The default convention is to use the class name. In this case a class name of UserProfile would create a
+    # user_profile (singular) table, but if we specify __tablename__ we can change it to `user_profiles` or some other name.
     __tablename__ = 'user_profiles'
     
     userID = db.Column(db.String, primary_key=True)

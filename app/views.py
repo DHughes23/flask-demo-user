@@ -55,7 +55,12 @@ def profile():
         db.session.add(profile)
         db.session.commit()
         
-        flash('Your profile was saved successfully', 'success')
+        '''db = app.connect_db()
+        cur = db.cursor()
+        cur.execute('insert into users (name, email) values (%s, %s)', (request.form['name'], request.form['email']))
+        db.commit()'''
+        
+        flash('Your profile was successfully added.', 'success')
         return redirect(url_for('home'))
         
     flash_errors(form)
@@ -63,6 +68,8 @@ def profile():
 
 @app.route('/profiles')
 def profiles():
+    db = app.connect_db()
+    cur = db.cursor()
     users = Profile.query.all()
     return render_template('profiles.html', users=users)
 
