@@ -8,13 +8,17 @@ This file creates your application.
 from app import app, db, login_manager
 from flask import render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, current_user, login_required
-from app.forms import LoginForm
-from app.models import UserProfile
+from app.forms import P_Form
+from app.models import Profile
 from werkzeug.security import check_password_hash
+import datetime
+from werkzeug.utils import secure_filename
+import os, random
 
 ###
 # Routing for your application.
 ###
+
 
 
 @app.route('/')
@@ -28,71 +32,56 @@ def about():
     """Render the website's about page."""
     return render_template('about.html', name="Mary Jane")
 
-
-@app.route('/secure-page')
-@login_required
-def secure_page():
-    """Render a secure page on our website that only logged in users can access."""
-    return render_template('secure_page.html')
-
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if current_user.is_authenticated:
-        # if user is already logged in, just redirect them to our secure page
-        # or some other page like a dashboard
-        return redirect(url_for('secure_page'))
-
-    # Here we use a class of some kind to represent and validate our
-    # client-side form data. For example, WTForms is a library that will
-    # handle this for us, and we use a custom LoginForm to validate.
-    form = LoginForm()
-    # Login and validate the user.
+@app.route('/profile', methods=['POST', 'GET'])
+def profile():
+    form = P_Form()
+    
     if request.method == 'POST' and form.validate_on_submit():
-        # Query our database to see if the username and password entered
-        # match a user that is in the database.
-        username = form.username.data
-        password = form.password.data
-
-        # user = UserProfile.query.filter_by(username=username, password=password)\
-        # .first()
-        # or
-        user = UserProfile.query.filter_by(username=username).first()
-
-        if user is not None and check_password_hash(user.password, password):
-            remember_me = False
-
-            if 'remember_me' in request.form:
-                remember_me = True
-
-            # If the user is not blank, meaning if a user was actually found,
-            # then login the user and create the user session.
-            # user should be an instance of your `User` class
-            login_user(user, remember=remember_me)
-
-            flash('Logged in successfully.', 'success')
-
-            next_page = request.args.get('next')
-            return redirect(next_page or url_for('home'))
-        else:
-            flash('Username or Password is incorrect.', 'danger')
-
+        f_name = form.f_name.data
+        l_name = form.l_name.data
+        gender = form.gender.data
+        e_address = form.e_address.data
+        location = form.location.data
+        bio = form.biography.data
+        
+        photo = request.files['photo']
+        filename = secure_filename(photo.filename)
+        photo.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        
+        userID = createID(f_name, l_name)
+        date_created = date_joined()
+        
+        profile = Profile(userID = userID, f_name = f_name, l_name = l_name, gender = gender, e_address = e_address, location = location, biography = bio, date = date_created, photo = filename)        
+        db.session.add(profile)
+        db.session.commit()
+        
+        flash('Your profile was saved successfully', 'success')
+        return redirect(url_for('home'))
+        
     flash_errors(form)
-    return render_template('login.html', form=form)
+    return render_template('profile.html', form = form)
 
+@app.route('/profiles')
+def profiles():
+    users = Profile.query.all()
+    return render_template('profiles.html', users=users)
 
-@app.route("/logout")
-@login_required
-def logout():
-    # Logout the user and end the session
-    logout_user()
-    flash('You have been logged out.', 'danger')
-    return redirect(url_for('home'))
+@app.route('/profiles/<userId>')
+def userProfile(userId):
+    """Render the website's about page."""
+    user = Profile.query.get(userId)
+    return render_template('userProfile.html', user=user)
 
+def createID(f_name, l_name):
+    f = f_name[0]
+    l = l_name[0]
+    id = f.upper()+l.upper()+str(random.randint(0,1000))
+    return id
+    
+def date_joined():
+    date = datetime.date.today().strftime("%B %d, %Y")
+    return "Joined " + date
 
-@login_manager.user_loader
-def load_user(id):
-    return UserProfile.query.get(int(id))
 
 
 # Flash errors from the form if validation fails with Flask-WTF
